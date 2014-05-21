@@ -171,8 +171,7 @@ or compute log-like for each feature vector (option `--for-each`) and store in T
 * options specified on the command line override settings from the ini file, but options not specified on the command
 line are still read from the provided ini file
 
-* if the GPU version does end with runtime errors (architecture), please try the SSE version with more threads (options: `--SSE
---numThrd n`)
+* if the GPU version does end with runtime errors (maybe wrong GPU architecture?), please try the SSE version with multiple threads (options: `--SSE --numThrd n`)
 
 ___
 
