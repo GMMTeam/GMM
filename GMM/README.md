@@ -7,9 +7,10 @@ SSE/GPU-accelerated training and evaluation of Gaussian Mixture Models (GMMs) - 
 
 * Boost -  available from: http://www.boost.org/users/download/
 * ACML  -  available from: http://developer.amd.com/tools-and-sdks/cpu-development/amd-core-math-library-acml/acml-downloads-resources/
-* CUDA (optional) -  available from: https://developer.nvidia.com/cuda-downloads
+* NVIDIA GPU with compute capability at least 1.1
+* CUDA -  available from: https://developer.nvidia.com/cuda-downloads
 
-For details see [CMakeLists.txt](https://github.com/GMMTeam/GMM/blob/master/GMM/CMakeLists.txt).
+Note that hte project can be build without the GPU acceleration. For more details see [CMakeLists.txt](https://github.com/GMMTeam/GMM/blob/master/GMM/CMakeLists.txt).
 
 ## TRAINING
 
