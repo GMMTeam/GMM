@@ -27,7 +27,7 @@ SET (ACML_MY_LIB_FILES "libacml_dll")
 
 IF (${USE_CUDA})
 	FIND_PACKAGE(CUDA REQUIRED)
-	# name of additional .lib file
+	# name of additional .lib file(s), depends on the version of CUDA
 	SET (CUDA_ADDLIB_FILE "cuda")
 
 	# set types of GPU architectures to be build for
