@@ -1,0 +1,6 @@
+add_subdirectory (general)
+add_subdirectory (tools)
+add_subdirectory (matrices)
+add_subdirectory (model)
+add_subdirectory (param)
+add_subdirectory (trainer)

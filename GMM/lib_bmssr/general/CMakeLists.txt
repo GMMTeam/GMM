@@ -1,0 +1,8 @@
+INCLUDE_DIRECTORIES("${GMMing_SOURCE_DIR}/lib_bmssr")
+ADD_DEFINITIONS(-DEXCEPTION_SUPPORT)
+
+ADD_LIBRARY(generalX
+	Exception.cpp
+)
+
+
