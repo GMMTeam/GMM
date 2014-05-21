@@ -27,7 +27,7 @@ or a file containing list of input files with full path, each on a separate line
 All of these options (`-i` or `-I`) can be specified multiple times.  
 
 Several formats of input files are available (see option `--data-T X`), for details
-on the formats see *lib_bmssr/param/OL_Param.cpp* or provided read/write MATLAB scripts.  
+on the formats see *lib_bmssr/param/OL_Param.cpp* or provided read/write [MATLAB scripts](https://github.com/GMMTeam/GMM/tree/master/GMM/IOscripts).  
 Possible formats are [SVES](https://github.com/GMMTeam/GMM/blob/master/GMM/IOscripts/writePRM.m) (internal format) | [HTK](https://github.com/GMMTeam/GMM/blob/master/GMM/IOscripts/writeHTK.m) | [RAW](https://github.com/GMMTeam/GMM/blob/master/GMM/IOscripts/saveBinF.m)
    
     RAW file-format (BIN): memory_buffer = [nsamples, dimension, data]
