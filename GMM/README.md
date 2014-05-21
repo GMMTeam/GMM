@@ -1,7 +1,13 @@
 GMM
 ===
 
-SSE/GPU-accelerated training and evaluation of Gaussian Mixture Models (GMMs)
+SSE/GPU-accelerated training and evaluation of Gaussian Mixture Models (GMMs) - written in C++
+
+###### Requires:
+
+* Boost -  available from: http://www.boost.org/users/download/
+* ACML  -  available from: http://developer.amd.com/tools-and-sdks/cpu-development/amd-core-math-library-acml/acml-downloads-resources/
+* CUDA (optional) -  available from: https://developer.nvidia.com/cuda-downloads
 
 ## TRAINING
 
