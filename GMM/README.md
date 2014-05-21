@@ -80,11 +80,11 @@ and it can be used to train the final GMM in several ways:
 
         trainGMM -i myInputFile.prm --data-T 2 --in-UBM initModel.gmm --type 2 --it-EM 32 --tau 0 --mean --weight --var -o myModel.gmm -T 
 
-The estimation from scratch, working with subsequent division of Gaussians, can be quite time consuming,
-therefore often a random initialization of GMM is used, e.g. pick M feature vectors from the training set,
+The estimation from scratch, working with subsequent division of Gaussians, can be quite time consuming.
+Therefor,e often a random initialization of GMM is used. For example: pick M feature vectors from the training set,
 use them as initial values of GMM means, compute the global variance of feature vectors in the training set
 and use it as the initial value for variances, set all the weights of Gaussian uniformly (but they
-have to sum up to one!). The use a few (e.g. 32) EM iterations for the GMM to converge, and repeat
+have to sum up to one!). Then use a few (e.g. 32) EM iterations for the GMM to converge, and repeat
 the whole process several times. At the end, use the model, which gives highest log-like on the training set,
 or use all the models with some voting scheme...  
 
@@ -93,22 +93,22 @@ It can help also in cases with diagonal covariances. It is designed for better g
 
 > J. Vanek, L. Machlica, J. Psutka, "Estimation of Single-Gaussian and Gaussian Mixture Models for Pattern Recognition", Progress in Pattern Recognition, Image Analysis, Computer Vision, and Applications Lecture Notes in Computer Science, 2013.
 
-If you train a model from huge amount of feature vectors, that would not fir into the memory at once,
+If you train a model from huge amount of feature vectors, that would not fit into the memory at once,
 you can divide the feature vectors to separate files and use the option `--file-by-file` (see also the option `--prm-buffer SIZE`). The algorithm will iterate through all the files without storing them in the memory at once.
 Check and turn off the option `--model-file-mode` if it is on.
 
 If you train a model from scratch, you could appreciate the option `--tmp-N X`, which is used to save temporary models
-after specified number of splits. If something goes wrong during the estimation process, you can use one of these
+after specified number of splits (*X*). If something goes wrong during the estimation process, you can use one of these
 models as the initial model (option `--in-UBM`) and do not have to start from the beginning.
 
 
 #### option `--in-classes`
 * assume a set of *N* files with feature vectors: fileFV_1.prm, fileFV_2.prm, ..., fileFV_N.prm stored in dir/myDir/
-* several models can be trained each from (not strictly) different files
-* at first a file myModels.txt has to be created containing information on which model to train from which file
+* several models can be trained, each from (not strictly) different files
+* at first, a file myModels.txt has to be created with information which model to train from which file
 * one line of myModels.txt represents a list of files separated by space, which should be used to train a model,
 which name is the first element on the line
-* example of myModels.txt:
+* example of myModels.txt (*L* models should be trained):
 
         model_1 fileFV_1 fileFV_2 fileFV_3
         model_2 fileFV_4 fileFV_5
@@ -116,9 +116,9 @@ which name is the first element on the line
         ...
         model_L fileFV_1 fileFV_4 fileFV_6
 
-* the name of the input directory, where the files are stored can be specified by option `-I dir/myDir`
+* the name of the input directory, where the files are stored, can be specified by option `-I dir/myDir`
 * extension of files can be specified by option `--inExt .prm`
-* to train the models and store them in the directory myOutDir:
+* train the models and store them in the directory myOutDir:
 
         trainGMM --in-classes myModels.txt -I dir/myDir -e .prm --data-T 2 --type 0 --nummix 4 --it-EM 8 -D myOutDir -T
 
@@ -162,7 +162,7 @@ or compute log-like for each feature vector (option `--for-each`) and store in T
 * options specified on the command line override settings from the ini file, but options not specified on the command
 line are still read from the provided ini file
 
-* if the GPU version does end with runtime errors, please try the SSE version with more threads (options: `--SSE
+* if the GPU version does end with runtime errors (architecture), please try the SSE version with more threads (options: `--SSE
 --numThrd n`)
 
 ___
