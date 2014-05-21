@@ -9,6 +9,8 @@ SSE/GPU-accelerated training and evaluation of Gaussian Mixture Models (GMMs) - 
 * ACML  -  available from: http://developer.amd.com/tools-and-sdks/cpu-development/amd-core-math-library-acml/acml-downloads-resources/
 * CUDA (optional) -  available from: https://developer.nvidia.com/cuda-downloads
 
+For details see [CMakeLists.txt](https://github.com/GMMTeam/GMM/blob/master/GMM/CMakeLists.txt).
+
 ## TRAINING
 
 * Executable: trainGMM
