@@ -74,7 +74,7 @@ and it can be used to train the final GMM in several ways:
         of a relevance factor (option `--tau r`). The higher is the value the more data are needed to get
         a significant change of the model parameters. If _THETA_ are the parameters to be reestimated,
         _THETAprior_ are the parameters from the initGMM, _THETApost_ are the parameters computed according
-        to the input data, and _ALPHA_ = _r_ \ (_Nsamples_ + _tau_), where _Nsamples_ is the amount of given
+        to the input data, and _ALPHA_ = _r_ \ (_Nsamples_ + _r_), where _Nsamples_ is the amount of given
         feature vectors and _r_ is the relevance factor specified by the user, the update formula is:  
         _THETAnew_ = _ALPHA_ * _THETAprior_ + (1 - _ALPHA_) * _THETApost_;  
         Note that not all the parameters have to be reestimated (e.g. because of insufficient
