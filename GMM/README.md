@@ -78,7 +78,7 @@ and it can be used to train the final GMM in several ways:
         feature vectors and _r_ is the relevance factor specified by the user, the MAP update formula is:  
         _THETAnew_ = _ALPHA_ * _THETAprior_ + (1 - _ALPHA_) * _THETApost_;  
         Note that not all the parameters have to be reestimated (e.g. because of insufficient
-        amount of data, when the estimate of the full-covariance matrix could get ill-conditioned).
+        amount of data the estimate of the full-covariance matrix could get ill-conditioned).
         To reestimate only the means and weights use options `--weight` and `--mean`, e.g.:
     
         trainGMM -i myInputFile.prm --data-T 2 --in-UBM initModel.gmm --type 2 --it-MAP 3 --tau 14 --mean --weight -o myModel.gmm -T 
