@@ -30,7 +30,7 @@ Several formats of input files are available (see option `--data-T X`), for deta
 on the formats see *lib_bmssr/param/OL_Param.cpp* or provided read/write MATLAB scripts.  
 Possible formats are [SVES](https://github.com/GMMTeam/GMM/blob/master/GMM/IOscripts/writePRM.m) (internal format) | [HTK](https://github.com/GMMTeam/GMM/blob/master/GMM/IOscripts/writeHTK.m) | [RAW](https://github.com/GMMTeam/GMM/blob/master/GMM/IOscripts/saveBinF.m)
    
-    RAW file-format (BIN): [nsamples, dimension, data]
+    RAW file-format (BIN): memory_buffer = [nsamples, dimension, data]
     * nsamples -> sizeof(int32), 
     * dimension -> sizeof(int32), 
     * data -> sizeof(float)*nsamples*dimension
@@ -45,7 +45,7 @@ The estimation algorithm works as follow:
 
 2. Specified number of EM iterations is performed for the new model to better fit the data
 
-3. If the number of Gaussians or number of splits reached the number of requested Gaussians,
+3. If the number of Gaussians or number of splits reached the number of requested Gaussians,  
    the algorithm ends, else go to step 1
 
 Note: the number of Gaussians to be split can be adjusted, see options `--split-X` and `--split-th`;
@@ -152,8 +152,8 @@ standard error stream. If the log-likelihood for each feature vector is requeste
 specify the output directory, in which for each input file a new file (with extension `--outExt .ext`) is stored with
 logLikes for each feature vector
 
-    BIN file-format: [foo, nsamples, logLikes]
-    * foo -> sizeof(int32), will have always value 1
+    BIN file-format: memory_buffer = [foo, nsamples, logLikes]
+    * foo -> sizeof(int32), will always have value 1
     * nsamples -> sizeof(int32), 
     * logLikes -> sizeof(float)*nsamples
 
