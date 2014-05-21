@@ -57,28 +57,28 @@ and it can be used to train the final GMM in several ways:
 
 2. reiterate the actual model (EM) without adding any extra Gaussians:
 
-2.1. The init model holds prior information on the distribution of feature vectors to be modeled,
-     e.g. the initModel.gmm was trained from all the available feature vectors, however we would
-     like to train a model only from a subset of the original set.
-     In this case one of the adaptation techniques can be used (MAP | MLLR | fMLLR). A good choice
-     is the Maximum A-posterior Probability (MAP) adaptation, where one has to specify the value
-     of a relevance factor (option `--tau r`). The higher is the value the more data are needed to get
-     a significant change of the model parameters. If _THETA_ are the parameters to be reestimated,
-     _THETAprior_ are the parameters from the initGMM, _THETApost_ are the parameters computed according
-     to the input data, and _ALPHA_ = _r_ \ (_Nsamples_ + _tau_), where _Nsamples_ is the amount of given
-     feature vectors and tau is the relevance factor specified by the user, the update formula is:  
-     _THETAnew_ = _ALPHA_ * _THETAprior_ + (1 - _ALPHA_) * _THETApost_;  
-     Note that not all the parameters have to be reestimated (e.g. because of insufficient
-     amount of data, when the estimate of the full-covariance matrix could get ill-conditioned).
-     To reestimate only the means and weights use options `--weight` and `--mean`, e.g.:
+    2.1. The init model holds prior information on the distribution of feature vectors to be modeled,
+        e.g. the initModel.gmm was trained from all the available feature vectors, however we would
+        like to train a model only from a subset of the original set.
+        In this case one of the adaptation techniques can be used (MAP | MLLR | fMLLR). A good choice
+        is the Maximum A-posterior Probability (MAP) adaptation, where one has to specify the value
+        of a relevance factor (option `--tau r`). The higher is the value the more data are needed to get
+        a significant change of the model parameters. If _THETA_ are the parameters to be reestimated,
+        _THETAprior_ are the parameters from the initGMM, _THETApost_ are the parameters computed according
+        to the input data, and _ALPHA_ = _r_ \ (_Nsamples_ + _tau_), where _Nsamples_ is the amount of given
+        feature vectors and _r_ is the relevance factor specified by the user, the update formula is:  
+        _THETAnew_ = _ALPHA_ * _THETAprior_ + (1 - _ALPHA_) * _THETApost_;  
+        Note that not all the parameters have to be reestimated (e.g. because of insufficient
+        amount of data, when the estimate of the full-covariance matrix could get ill-conditioned).
+        To reestimate only the means and weights use options `--weight` and `--mean`, e.g.:
     
         trainGMM -i myInputFile.prm --data-T 2 --in-UBM initModel.gmm --type 2 --it-MAP 3 --tau 14 --mean --weight -o myModel.gmm -T 
 
-2.1. The init model is a kind of random initialization and does not hold any prior information.
-     Therefore all the parameters should be reestimated without the use of any relevance factor
-     (do not pull the new model toward the initial model). E.g.:
-    
-    trainGMM -i myInputFile.prm --data-T 2 --in-UBM initModel.gmm --type 2 --it-EM 32 --tau 0 --mean --weight --var -o myModel.gmm -T 
+    2.2. The init model is a kind of random initialization and does not hold any prior information.
+        Therefore all the parameters should be reestimated without the use of any relevance factor
+        (do not pull the new model toward the initial model). E.g.:
+
+        trainGMM -i myInputFile.prm --data-T 2 --in-UBM initModel.gmm --type 2 --it-EM 32 --tau 0 --mean --weight --var -o myModel.gmm -T 
 
 The estimation from scratch, working with subsequent division of Gaussians, can be quite time consuming,
 therefore often a random initialization of GMM is used, e.g. pick M feature vectors from the training set,
