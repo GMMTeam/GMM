@@ -6,4 +6,4 @@ Well suited for large datasets, supports training on multiple GPUs at once and C
 
 More detailed description is in README.md inside the GMM folder.
 
-Developed at University of West Bohemia, Department of Cybernetics [link](http://www.kky.zcu.cz/en/sw/gmm-estimator).
+Developed at University of West Bohemia, Department of Cybernetics [[link]](http://www.kky.zcu.cz/en/sw/gmm-estimator).
