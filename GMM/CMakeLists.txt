@@ -29,7 +29,9 @@ IF (${USE_CUDA})
 	FIND_PACKAGE(CUDA REQUIRED)
 	# name of additional .lib file(s), depends on the version of CUDA
 	SET (CUDA_ADDLIB_FILE "cuda")
-	# if necessary add additional CUDA .lib files (needed in some of the CUDA versions)
+	
+	# if necessary additional CUDA .lib files can be added 
+	# (needed in some of the CUDA versions)
 	# LIST (APPEND CUDA_ADDLIB_FILE "cudart")
 
 	# set types of GPU architectures to be build for
