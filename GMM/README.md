@@ -22,7 +22,7 @@ The project can be build without the GPU acceleration. For more details see [CMa
 
 ## TRAINING
 
-* Executable: trainGMM
+* Executable: *trainGMM*
 * For list of possible options run the executable without any parameters or with `--help`
 
 
@@ -149,7 +149,7 @@ which name is the first element on the line
 ## LOG-LIKELIHOOD
 
 It is straight-forward to get the log-likelihood for a given set of feature vectors once a GMM was trained.
-For this purpose, the getLogLike executable was designed.
+For this purpose, the *getLogLike* executable was designed.
 
 For list of possible options run the executable without any parameters or with `--help`
 
