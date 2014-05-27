@@ -10,7 +10,7 @@ SSE/GPU-accelerated training and evaluation of Gaussian Mixture Models (GMMs) - 
 * NVIDIA GPU with compute capability at least 1.1
 * CUDA -  available from: https://developer.nvidia.com/cuda-downloads
 
-Note that hte project can be build without the GPU acceleration. For more details see [CMakeLists.txt](https://github.com/GMMTeam/GMM/blob/master/GMM/CMakeLists.txt). [LL](# LOG-LIKELIHOOD)
+Note that hte project can be build without the GPU acceleration. For more details see [CMakeLists.txt](https://github.com/GMMTeam/GMM/blob/master/GMM/CMakeLists.txt). [LL](## LOG-LIKELIHOOD)
 
 ## TRAINING
 
