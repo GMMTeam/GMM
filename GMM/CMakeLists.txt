@@ -14,7 +14,10 @@ SET (ACML_ROOT_DIR "/usr/acml5.3.1")
 SET (ACML_INCLUDE_DIR "${ACML_ROOT_DIR}/ifort64/include")
 SET (ACML_LIB_DIR "${ACML_ROOT_DIR}/ifort64/lib")
 # note: in LINUX, the name of the lib file has to be given without the prefix 'lib' and 
-# without the extension '.lib', in WIN also the prefix has to be given, i.e. "libacml"
+# without the extension '.lib', in WIN also the prefix has to be given, e.g.
+#                             WIN            LINUX
+#  library file name:    libacml_dll.lib   libacml.so
+#  ACML_MY_LIB_FILES:    "libacml_dll"      "acml"
 SET (ACML_MY_LIB_FILES "acml")
 
 
