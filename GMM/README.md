@@ -176,6 +176,16 @@ or compute log-like for each feature vector (option `--for-each`) and store in T
 
 ## EXAMPLE
 
+A toy example is provided in the directory [GMM/GMM/Example](https://github.com/GMMTeam/GMM/tree/master/GMM/example), where also a dataset in [RAW](https://github.com/GMMTeam/GMM/blob/master/GMM/IOscripts/saveBinF.m) format is available. Once the project was build, copy the executables to the Example directory and you can easily train your first model:
+
+    ./trainGMM -v -i data.bin --data-T 2 --type 0 --nummix 4 --it-EM 8 -o myModel.gmm -T --SSE --numThrd 4
+
+and compute the log-likelihood:
+
+    ./getLogLike -i data.bin --data-T 2 --in-GMM myModel.gmm -L --SSE --numThrd 4
+
+For more examples see [trainModel.bat](https://github.com/GMMTeam/GMM/blob/master/GMM/example/trainModel.bat) and [getLogLike.bat](https://github.com/GMMTeam/GMM/blob/master/GMM/example/getLogLike.bat).
+
 ## ADDITIONAL INFO
 
 * options specified on the command line override settings from the ini file, but options not specified on the command
