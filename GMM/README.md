@@ -18,7 +18,7 @@ Note that hte project can be build without the GPU acceleration. For more detail
 * [Training](#training)
 * [Log-likelihood](#log-likelihood)
 * [Example](#example)
-* [Additional info](#additional info)
+* [Additional info](#additional-info)
 
 ## INSTALL
 
