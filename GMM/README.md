@@ -10,7 +10,17 @@ SSE/GPU-accelerated training and evaluation of Gaussian Mixture Models (GMMs) - 
 * NVIDIA GPU with compute capability at least 1.1
 * CUDA -  available from: https://developer.nvidia.com/cuda-downloads
 
-Note that hte project can be build without the GPU acceleration. For more details see [CMakeLists.txt](https://github.com/GMMTeam/GMM/blob/master/GMM/CMakeLists.txt). [ll](#log-likelihood)
+Note that hte project can be build without the GPU acceleration. For more details see [CMakeLists.txt](https://github.com/GMMTeam/GMM/blob/master/GMM/CMakeLists.txt). 
+
+###### Requires:
+
+* [Install](#install)
+* [Training](#training)
+* [Log-likelihood](#log-likelihood)
+* [Example](#example)
+* [Additional info](#additional info)
+
+## INSTALL
 
 ## TRAINING
 
@@ -166,7 +176,9 @@ or compute log-like for each feature vector (option `--for-each`) and store in T
     getLogLike -i myInputFile1.prm -i myInputFile2.prm -I myInputDir -I myInputListFile.txt --data-T 2 --in-GMM myModel.gmm -L --for-each -o ./ -T
 
 
-## GENERAL INFO
+## EXAMPLE
+
+## ADDITIONAL INFO
 
 * options specified on the command line override settings from the ini file, but options not specified on the command
 line are still read from the provided ini file
