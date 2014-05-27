@@ -6,6 +6,18 @@ SET (USE_CUDA 0)
 SET (BUILD_GMM_TRAIN 1)
 SET (BUILD_GMM_LOGLIKE 1)
 
+
+# ACML available from: http://developer.amd.com/tools-and-sdks/cpu-development/amd-core-math-library-acml/acml-downloads-resources/
+# once installed, set paths to include and lib dirs; check the name of the ACML lib file provided and 
+# (if necessary) change it in ACML_MY_LIB_FILES
+SET (ACML_ROOT_DIR "/usr/acml5.3.1")
+SET (ACML_INCLUDE_DIR "${ACML_ROOT_DIR}/ifort64/include")
+SET (ACML_LIB_DIR "${ACML_ROOT_DIR}/ifort64/lib")
+# note: in LINUX, the name of the lib file has to be given without the prefix 'lib' and 
+# without the extension '.lib', in WIN also the prefix has to be given, i.e. "libacml"
+SET (ACML_MY_LIB_FILES "acml")
+
+
 # Boost available from: http://www.boost.org/users/download/
 FIND_PACKAGE(Boost REQUIRED)
 
@@ -24,15 +36,6 @@ SET (Boost_MY_LIB_FILES
 #	"boost_thread-mt"
 )
 
-# ACML available from: http://developer.amd.com/tools-and-sdks/cpu-development/amd-core-math-library-acml/acml-downloads-resources/
-# once installed, set paths to include and lib dirs; check the name of the ACML lib file provided and 
-# (if necessary) change it in ACML_MY_LIB_FILES
-SET (ACML_ROOT_DIR "/usr/acml5.3.1")
-SET (ACML_INCLUDE_DIR "${ACML_ROOT_DIR}/ifort64/include")
-SET (ACML_LIB_DIR "${ACML_ROOT_DIR}/ifort64/lib")
-# note: in LINUX, the name of the lib file has to be given without the prefix 'lib' and 
-# without the extension '.lib', in WIN also the prefix has to be given, i.e. "libacml"
-SET (ACML_MY_LIB_FILES "acml")
 
 IF (${USE_CUDA})
 	FIND_PACKAGE(CUDA REQUIRED)
