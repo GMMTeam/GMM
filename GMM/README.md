@@ -23,7 +23,7 @@ The project can be build without the GPU acceleration. For more details see [CMa
 ## TRAINING
 
 * Executable: *trainGMM*
-* For list of possible options run the executable without any parameters or with `--help`
+* For list of possible options run the executable without any parameters or with `--help`, or see the [ini file](https://github.com/GMMTeam/GMM/blob/master/GMM/projects/Model_ADAPT/Model_ADAPT.ini)
 
 
 All the options can be specified through the command line or in an .ini file, which
@@ -151,7 +151,7 @@ which name is the first element on the line
 It is straight-forward to get the log-likelihood for a given set of feature vectors once a GMM was trained.
 For this purpose, the *getLogLike* executable was designed.
 
-For list of possible options run the executable without any parameters or with `--help`
+For list of possible options run the executable without any parameters or with `--help`, or see the [ini file](https://github.com/GMMTeam/GMM/blob/master/GMM/projects/GetLogLikeGMM/GetLogLikeGMM.ini).
 
 If only a mean log-like of all the feature vectors stored in one file is desired, you don't have to specify any output
 file, the mean log-likes along with the filename of the file with feature vectors is written directly on the standard
