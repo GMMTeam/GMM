@@ -50,8 +50,9 @@ public:
 		            // to get a proper first moment.
 		T* var;     // Divide at the end by mixProb 
 				    // to get a proper second central moment.
-		T* aux;     // auxiliary statistics
-		T aux2;		// auxiliary number
+		T* aux;     // auxiliary statistics - acc abs diff
+		T aux2;		// auxiliary number     - sum sqrt(g)
+		T aux3;		// auxiliary number     - sum(g) 
 	};
 	
 	GMMStats();
@@ -98,6 +99,7 @@ public:
 	const T* getVar (unsigned int mixidx) const;
 	const T* getAux (unsigned int mixidx) const;
 	const T getAux2 (unsigned int mixidx) const;
+	const T getAux3 (unsigned int mixidx) const;
 	
 	void getMixStats (mixStats& ms_dest, unsigned int mixidx, 
 					  bool allocate = true) const;  

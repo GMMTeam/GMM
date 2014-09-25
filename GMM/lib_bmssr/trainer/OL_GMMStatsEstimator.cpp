@@ -1103,7 +1103,7 @@ void GMMStatsEstimator<TS, TV, TL>::shareData (GMMStatsEstimator<TS, TV, TL>& es
 
 template <typename TS, typename TV, typename TL>
 void GMMStatsEstimator<TS, TV, TL>::accumulateStats (TV** vecs, unsigned int NSamples, unsigned int dim,
-												     GMMStats<TS>& gmms, unsigned int offset)
+													 GMMStats<TS>& gmms, unsigned int offset)
 {
 	if(!_modelIn) {
 		if(!gmms.isAllocated()) {
@@ -1116,22 +1116,19 @@ void GMMStatsEstimator<TS, TV, TL>::accumulateStats (TV** vecs, unsigned int NSa
 #endif
 
 		std::vector<TL> gammas;
+		std::vector<TL> gammas_old;
 		gammas.push_back((TL) 1.0);
+		gammas_old.push_back((TL) 1.0);
 		unsigned int mixidx = 0;
 		for(unsigned int i = 0; i < NSamples; i++) 
 		{
 			if(*_sharedThrdFailedStatus)
 				throw std::runtime_error("accumulateStats(): one of the threads failed - thread terminating");
-			
+
 			accumulateStats(vecs[offset + i], dim, gmms, gammas, &mixidx, 1);			
 
 			if(_fAux) {
-				if (i > 0 && i < NSamples - 1)
-					accumulateAuxStats(vecs[offset + i - 1], vecs[offset + i], vecs[offset + i + 1], dim, gmms, gammas, &mixidx, 1);
-				else if (i == 0)
-					accumulateAuxStats(vecs[offset + 1], vecs[offset], vecs[offset + 1], dim, gmms, gammas, &mixidx, 1);			
-				else if (i == NSamples - 1)
-					accumulateAuxStats(vecs[offset + i - 1], vecs[offset + i], vecs[offset + i - 1], dim, gmms, gammas, &mixidx, 1);			
+				if (i > 0) accumulateAuxStats(vecs[offset + i - 1], vecs[offset + i], dim, gmms, gammas, gammas_old, &mixidx, &mixidx, 1, 1);
 			}
 		}
 	}
@@ -1152,6 +1149,9 @@ void GMMStatsEstimator<TS, TV, TL>::accumulateStats (TV** vecs, unsigned int NSa
 
 		TL ll; // frame logLike
 		unsigned int *mixidx = NULL, Nmi = 0;
+		std::vector<TL> _gammas_old;
+		unsigned int *mixidx_old=NULL;
+		unsigned int Nmi_old = 0;
 		for(unsigned int i = 0; i < NSamples; i++) 
 		{				
 			if(*_sharedThrdFailedStatus)
@@ -1173,12 +1173,18 @@ void GMMStatsEstimator<TS, TV, TL>::accumulateStats (TV** vecs, unsigned int NSa
 			accumulateStats(vecs[offset + i], dim, gmms, _gammas, mixidx, Nmi);			
 
 			if(_fAux) {
-				if (i > 0 && i < NSamples - 1)
-					accumulateAuxStats(vecs[offset + i - 1], vecs[offset + i], vecs[offset + i + 1], dim, gmms, _gammas, mixidx, Nmi);
-				else if (i == 0)
-					accumulateAuxStats(vecs[offset + 1], vecs[offset], vecs[offset + 1], dim, gmms, _gammas, mixidx, Nmi);			
-				else if (i == NSamples - 1)
-					accumulateAuxStats(vecs[offset + i - 1], vecs[offset + i], vecs[offset + i - 1], dim, gmms, _gammas, mixidx, Nmi);			
+				if (i == 0) {
+					if(mixidx != NULL) mixidx_old = new unsigned int [_nummix];
+					Nmi_old = Nmi;
+				} else {
+					accumulateAuxStats(vecs[offset + i - 1], vecs[offset + i], dim, gmms, _gammas, _gammas_old, mixidx, mixidx_old, Nmi, Nmi_old);
+				}
+				_gammas_old = _gammas;
+				if(mixidx != NULL) {
+					memcpy(mixidx_old, mixidx, sizeof(int) * Nmi);
+					Nmi_old = Nmi;
+					if(i == NSamples - 1) delete[] mixidx_old;
+				}
 			}
 		}
 	}
@@ -1223,25 +1229,105 @@ void GMMStatsEstimator<TS, TV, TL>::compVecsLogLike (TV** vecs, unsigned int NSa
 
 
 
+//template <typename TS, typename TV, typename TL>
+//void GMMStatsEstimator<TS, TV, TL>::accumulateAuxStats (TV* vec1, TV* vec2, TV* vec3, unsigned int dim, 
+//														GMMStats<TS>& gmms, std::vector<TL>& gammas,
+//													    unsigned int* mixIdxs, unsigned int Nmi)
+//{
+//	unsigned int index, M = (mixIdxs != NULL) ? Nmi : _nummix;
+//	for(unsigned int i = 0; i < M; i++) {
+//		index = (mixIdxs != NULL) ? mixIdxs[i] : i; 
+//		if(gammas[index] <= _minGamma)
+//			continue;
+//
+//		unsigned int shift = 0;
+//		for(unsigned int k = 0; k < dim; k++) {
+//			gmms._ms[index].aux[k] += (TS) (0.5 * gammas[index] * ( fabs(vec2[k] - vec1[k]) + fabs(vec3[k] - vec2[k]) ) );
+//		} // for k
+//		gmms._ms[index].aux2 += sqrt(gammas[index]);
+//	}
+//}
+
+//new D variant 
 template <typename TS, typename TV, typename TL>
-void GMMStatsEstimator<TS, TV, TL>::accumulateAuxStats (TV* vec1, TV* vec2, TV* vec3, unsigned int dim, 
-														GMMStats<TS>& gmms, std::vector<TL>& gammas,
-													    unsigned int* mixIdxs, unsigned int Nmi)
+void GMMStatsEstimator<TS, TV, TL>::accumulateAuxStats (TV* vec1, TV* vec2, unsigned int dim, 
+														GMMStats<TS>& gmms, std::vector<TL>& gammas, std::vector<TL>& gammas_old,
+													    unsigned int* mixIdxs, unsigned int* mixIdxs_old, unsigned int Nmi, unsigned int Nmi_old)
 {
-	unsigned int index, M = (mixIdxs != NULL) ? Nmi : _nummix;
-	for(unsigned int i = 0; i < M; i++) {
-		index = (mixIdxs != NULL) ? mixIdxs[i] : i; 
-		if(gammas[index] <= _minGamma)
-			continue;
 
-		unsigned int shift = 0;
-		for(unsigned int k = 0; k < dim; k++) {
-			gmms._ms[index].aux[k] += (TS) (0.5 * gammas[index] * ( fabs(vec2[k] - vec1[k]) + fabs(vec3[k] - vec2[k]) ) );
-		} // for k
-		gmms._ms[index].aux2 += sqrt(gammas[index]);
+	//no Gaussians pruning:
+	if(mixIdxs == NULL) {
+		//compute gammas norm factor
+		TL gs = 0;
+		for(unsigned int i = 0; i < _nummix; i++) {
+			TL g = gammas[i] * gammas_old[i];
+			if(g > _minGamma) gs += g;
+		}
+		if(gs > 0) gs = 1/gs;
+
+		for(unsigned int i = 0; i < _nummix; i++) {
+			TL g = gs * gammas[i] * gammas_old[i];
+			if(gammas[i] > _minGamma) gmms._ms[i].aux2 += sqrt((TS)gammas[i]);
+			if(g <= _minGamma) continue;
+			for(unsigned int k = 0; k < dim; k++) {
+				TV ad = fabs(vec2[k] - vec1[k]);
+				gmms._ms[i].aux[k] += (TS) (g * ad);
+			} // for k
+			gmms._ms[i].aux3 += g;
+			////LLLLLLLLLLLLLLLLLLL
+			//if(_nummix==2) {
+			//	FILE *fid = fopen("xxa.txt", "a");
+
+			//	fclose(fid);
+			//}
+			////LLLLLLLLLLLLLLLLLLL
+		}
+
+	} else {
+		//two gammas best lists
+		
+		unsigned int i1 = 0;
+		unsigned int i2 = 0;
+		//compute gammas norm factor
+		TL gs = 0;
+		while(true) {
+			unsigned int id1 = mixIdxs_old[i1];
+			unsigned int id2 = mixIdxs[i2];
+			TL g = (id1 == id2) * gammas[id2] * gammas_old[id1];
+			if(g > _minGamma) gs += g;
+			i1 += (id1 <= id2);
+			i2 += (id2 <= id1);
+			if(i1 >= Nmi_old) break;
+			if(i2 >= Nmi) break;
+		}
+		if(gs > 0) gs = 1/gs;
+
+		i1 = 0;
+		i2 = 0;
+		while(true) {
+			unsigned int id1 = mixIdxs_old[i1];
+			unsigned int id2 = mixIdxs[i2];
+			TL g = (id1 == id2) * gs * gammas[id2] * gammas_old[id1];
+			if(g > _minGamma) {
+				for(unsigned int k = 0; k < dim; k++) {
+					TV ad = fabs(vec2[k] - vec1[k]);
+					gmms._ms[id1].aux[k] += (TS) (g * ad);
+				} // for k
+				gmms._ms[id1].aux3 += g;
+			}
+			i1 += (id1 <= id2);
+			i2 += (id2 <= id1);
+			if(i1 >= Nmi_old) break;
+			if(i2 >= Nmi) break;
+		}
+		for(unsigned int i = 0; i < Nmi; i++) {
+			unsigned int id = mixIdxs[i];
+			gmms._ms[id].aux2 += sqrt((TS)gammas[id]);
+		}
+
 	}
-}
 
+}
 
 
 template <typename TS, typename TV, typename TL>
@@ -1249,6 +1335,16 @@ void GMMStatsEstimator<TS, TV, TL>::accumulateStats (TV* vec, unsigned int dim, 
 													 unsigned int* mixIdxs, unsigned int Nmi)
 {
 	unsigned int index, M = (mixIdxs != NULL) ? Nmi : _nummix;
+
+	////LLLLLLLLLLLLLLLLLLL
+	//if(M == 2) {
+	//	FILE *fid = fopen("xxx.txt", "a");
+	//	fprintf(fid, "%e %e\n", gammas[0], gammas[1]);
+	//	fclose(fid);
+	//}
+	////LLLLLLLLLLLLLLLLLL
+
+
 	for(unsigned int i = 0; i < M; i++) {
 		index = (mixIdxs != NULL) ? mixIdxs[i] : i; 
 		if(gammas[index] <= _minGamma)

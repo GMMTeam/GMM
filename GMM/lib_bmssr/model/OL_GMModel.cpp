@@ -335,10 +335,9 @@ int GMModel::GetMixParam(int Mixture, float *Mean, float *Var, float *Weight){
 	*Weight = this->Weights[Mixture];
 
 	int i;
-	for(i=0;i<Dim;i++){
-		Mean[i] = Mixes[Mixture]->Mean[i];
-		Var[i] = Mixes[Mixture]->Var[i];
-	} //for i
+	for(i=0;i<Dim;i++) Mean[i] = Mixes[Mixture]->Mean[i];
+	for(i=0;i<DimVar;i++) Var[i] = Mixes[Mixture]->Var[i];
+
 	return(0);
 } //GetMixParam
 
@@ -642,6 +641,9 @@ int	GMModel::ReadTXT(const char *FileName){
 		} //for i
 		free((void*) Mixes);
 	}
+	Weights = NULL;
+	NormCoef = NULL;
+	Mixes = NULL;
 
 	//otevreni souboru
 	if ((fr = fopen(FileName, "r")) == NULL){

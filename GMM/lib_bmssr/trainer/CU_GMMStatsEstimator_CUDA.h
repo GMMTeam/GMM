@@ -117,6 +117,8 @@ public:
 		unsigned int llSize;     // size = Nframes_processed (aligned) OR ll_storeAll => size = Nframes (aligned) 
 		bool ll_storeAll;
 
+		float4* d_aux_ll;	//normalisation LL to compute aux statistics
+
 		float* d_totll;  // overall LogLike
 	};
 

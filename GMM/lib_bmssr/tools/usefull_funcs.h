@@ -34,7 +34,7 @@
 #endif
 
 #ifndef MY_MAX_LINE_LENGTH
-#define MY_MAX_LINE_LENGTH  1000
+#define MY_MAX_LINE_LENGTH  90000
 #endif
 
 #include "general/GlobalDefine.h"
@@ -328,6 +328,11 @@ namespace utilities {
 		while(file.getline(line, MY_MAX_LINE_LENGTH)) {
 			if(line[0] != '\n')
 				linenum++;
+		}
+
+		if(linenum<=0) {
+			std::string errors = std::string("tLoadMergingLists():List ") + pathToList + " is empty or missing \\n!";
+			throw std::runtime_error(errors.c_str());
 		}
 
 		CFileList **groupLists;

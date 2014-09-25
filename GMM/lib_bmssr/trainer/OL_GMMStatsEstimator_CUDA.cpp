@@ -260,7 +260,7 @@ void GMMStatsEstimator_CUDA<TS>::insertModel (GMModel& model, bool first)
 	for (unsigned int n = 0; n < _GPUs.size(); n++) 
 	{		
 		unsigned int sharedMemPerBlock = _GPUs[n]->getSharedMemPerBlock();
-		if (sharedMemPerBlock / sizeof(float) / FRAME_BLOCK < this->_dim)	
+		if (model.GetFullCovStatus() && sharedMemPerBlock / sizeof(float) / FRAME_BLOCK < this->_dim)	
 			throw std::runtime_error("insertModel(): Dimensions too high to fit to GPU shared memory!");	
 
 		_GPUs[n]->uploadModel(_meanBuffC, _ivarBuffC, _gConstBuffC, 
@@ -554,7 +554,7 @@ void GMMStatsEstimator_CUDA<TS>::reallocOutArrays()
 	}
 
 	if(this->_fAux) {
-		unsigned int adA = _alignedNMixAllocC * (_alignedDimC + 1); // store aux2 in the last dimension of auxiliary stats
+		unsigned int adA = _alignedNMixAllocC * (_alignedDimC + 2); // store aux2 and aux3 in the last two dimensions of auxiliary stats
 		if(_alignedDimAuxC != adA) {			
 			GMMStatsEstimator_GPU::freeOnHost((void **) &_auxStatsBuffC);
 			GMMStatsEstimator_GPU::allocOnHost((void **) &_auxStatsBuffC, adA * sizeof(float));
@@ -615,7 +615,7 @@ void GMMStatsEstimator_CUDA<TS>::export2GMMStats(GMMStats<TS>& gmms,
 		for (unsigned int d = 0; d < this->_dim; d++) 
 		{
 			if(this->_fAux)
-				gmms._ms[i].aux[d] += (TS) auxS[i * (_alignedDimC + 1) + d];							
+				gmms._ms[i].aux[d] += (TS) auxS[i * (_alignedDimC + 2) + d];							
 
 			if(this->_fMean)
 				gmms._ms[i].mean[d] += (TS) meanS[i * _alignedDimC + d];
@@ -640,8 +640,10 @@ void GMMStatsEstimator_CUDA<TS>::export2GMMStats(GMMStats<TS>& gmms,
 				}
 			}
 		} // d < dim
-		if(this->_fAux)
-			gmms._ms[i].aux2 += (TS) auxS[i * (_alignedDimC + 1) + _alignedDimC];
+		if(this->_fAux) {
+			gmms._ms[i].aux2 += (TS) auxS[i * (_alignedDimC + 2) + _alignedDimC];
+			gmms._ms[i].aux3 += (TS) auxS[i * (_alignedDimC + 2) + _alignedDimC + 1];
+		}
 	}
 }
 

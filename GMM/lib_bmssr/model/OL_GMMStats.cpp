@@ -116,6 +116,7 @@ GMMStats<T>& GMMStats<T>::operator+= (const GMMStats<T>& rgmmStats) {
 			if(_allA && rgmmStats._allA) {
 				_ms[i].aux[n] += rgmmStats._ms[i].aux[n];
 				_ms[i].aux2 += rgmmStats._ms[i].aux2;
+				_ms[i].aux3 += rgmmStats._ms[i].aux3;
 			}
 
 			if(_allV && rgmmStats._allV) {
@@ -317,6 +318,7 @@ void GMMStats<T>::reset() {
 				if( _allA) {
 					(*it).aux[i] = 0;
 					(*it).aux2 = 0;
+					(*it).aux3 = 0;
 				}
 			}			
 			if (_allFV) {
@@ -359,6 +361,7 @@ void GMMStats<T>::getMixStats (mixStats& msDest, unsigned int mixidx,
 
 	if (_allA) {
 		msDest.aux2 = _ms[mixidx].aux2;
+		msDest.aux3 = _ms[mixidx].aux3;
 		for (unsigned int i = 0; i < _dim; i++)
 			msDest.aux[i] = _ms[mixidx].aux[i];
 	}
@@ -478,7 +481,13 @@ inline const T GMMStats<T>::getAux2 (unsigned int mixidx) const {
 	return _ms[mixidx].aux2;
 }
 
-
+template <typename T>
+inline const T GMMStats<T>::getAux3 (unsigned int mixidx) const {
+	if (mixidx >= _ms.size()) 
+		throw std::out_of_range("getVar(): Specified index out of bounds! \n\t");		
+	
+	return _ms[mixidx].aux3;
+}
 
 template <typename T>
 void GMMStats<T>::load (const char* filename, bool loadTXT, 
@@ -787,6 +796,7 @@ void GMMStats<T>::saveAux (const char* filename) const
 			for (unsigned int m = 0; m < nummix; m++)
 			{			
 				ofile << _ms[m].aux2 << std::endl;
+				ofile << _ms[m].aux3 << std::endl;
 				for (unsigned int i = 0; i < _dim; i++)
 					ofile << " " << _ms[m].aux[i];
 				ofile << std::endl;			

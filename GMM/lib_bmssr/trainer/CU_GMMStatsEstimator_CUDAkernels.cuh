@@ -49,6 +49,21 @@
 
 #define KERNEL_GPU_SAFE_MODE
 
+void dumpCUDADATAfloat(float *dd_data, int rows, int cols, const char *filename) 
+{
+	float *foo = new float[rows*cols];
+	GMMStatsEstimator_GPU::checkError( cudaMemcpy(foo, dd_data, sizeof(float)*rows*cols, cudaMemcpyDeviceToHost) );
+	FILE *fid = fopen(filename, "w");
+	for(int i = 0; i<rows; i++) {
+		for(int ii = 0; ii<cols; ii++) {
+			fprintf(fid, " %f", foo[i*cols+ii]);
+		}
+		fprintf(fid, "\n");
+	}
+	fclose(fid);
+	delete foo;
+}
+
 void printfCUDADATAfloat(float *dd_data, int num, char*str=NULL) 
 {
 	float *foo = new float[num];
@@ -104,76 +119,193 @@ namespace {
 
 
 
- //<<< _model->nummix, _model->dim, (_model->dim+2)*FRAME_BLOCK*sizeof(float) >>> 
-__global__ void accAuxStatsKernel_OLD (GMMStatsEstimator_GPU::param p,
-								       GMMStatsEstimator_GPU::likes l,
-								       GMMStatsEstimator_GPU::stats s,
-								       GMMStatsEstimator_GPU::OPTIONS opt,
-								       unsigned int nummix,
-								       unsigned int shiftFrames)
-{
-	unsigned int ix = blockIdx.x;
-	unsigned int tid = threadIdx.x;
+// //<<< _model->nummix, _model->dim, (_model->dim+2)*FRAME_BLOCK*sizeof(float) >>> 
+//__global__ void accAuxStatsKernel_OLD (GMMStatsEstimator_GPU::param p,
+//								       GMMStatsEstimator_GPU::likes l,
+//								       GMMStatsEstimator_GPU::stats s,
+//								       GMMStatsEstimator_GPU::OPTIONS opt,
+//								       unsigned int nummix,
+//								       unsigned int shiftFrames)
+//{
+//	unsigned int ix = blockIdx.x;
+//	unsigned int tid = threadIdx.x;
+//
+//	const unsigned int FRAME_BLOCK = GMMStatsEstimator_GPU::FRAME_BLOCK;
+//	const unsigned int DIM_BLOCK = GMMStatsEstimator_GPU::DIM_BLOCK;
+//
+//	extern __shared__ float xx[];
+//	float *gamma = xx + p.dim*FRAME_BLOCK;
+//	//float *buffLL = gamma + FRAME_BLOCK;
+//
+//	//"-1th" frame init
+//	float auxAcc = 0.0f; //mean abs diff accumulator		
+//	float g_old = 0.0f;
+//
+//	float x_old = p.d_vecs[shiftFrames * p.dim + 1 + tid*FRAME_BLOCK]; //init by second frame
+//	float dx_old = fabs(p.d_vecs[shiftFrames * p.dim + tid*FRAME_BLOCK] - x_old);
+//	
+//	//unsigned int NSamples_max = p.Nframes_unaligned - shiftFrames;
+//	unsigned int NSamples = (shiftFrames + p.Nframes_processed < p.Nframes) ? p.Nframes_processed : p.Nframes - shiftFrames;
+//
+//	float sqrtgm = 0;
+//	for(unsigned int i=0; i< NSamples / FRAME_BLOCK; i++) {
+//
+//		__syncthreads();
+//
+//		//load gammas
+//		for(unsigned int f = tid; f < FRAME_BLOCK; f += blockDim.x) {
+//			gamma[f] = ((float*) l.d_gammas)[4*ix + i * FRAME_BLOCK * nummix + 4 * (f/DIM_BLOCK) * nummix + f%DIM_BLOCK];
+//			gamma[f] *= 0.5f;
+//		}
+//
+//		__syncthreads();
+//		
+//		//load param into shared memory - in frame by frame order (bank conflicts)
+//		for(unsigned int m = tid; m < FRAME_BLOCK * p.dim; m += blockDim.x)
+//			xx[(m % FRAME_BLOCK) * p.dim + (m / FRAME_BLOCK)] = p.d_vecs[shiftFrames * p.dim + i * FRAME_BLOCK * p.dim + m];
+//		
+//		__syncthreads();
+//
+//		//calculate differences
+//		float dx = fabs(x_old - xx[tid]);
+//		auxAcc += g_old * (dx_old + dx);
+//		dx_old = dx;
+//
+//#pragma unroll
+//		for(unsigned int f = 0; f < FRAME_BLOCK - 1; f++) {
+//			dx = fabs(xx[f * p.dim + tid] - xx[(f + 1) * p.dim + tid]);
+//			auxAcc += gamma[f] * (dx + dx_old);
+//			sqrtgm += sqrt(gamma[f]);
+//			dx_old = dx;
+//		}
+//		x_old = xx[(FRAME_BLOCK - 1) * p.dim + tid];
+//		g_old = gamma[FRAME_BLOCK - 1];
+//	} //for i - Nframes/FRAME_BLOCK
+//
+//	//last frame:
+//	auxAcc += 2.0f * g_old * dx_old;
+//
+//	s.d_auxStats[ix * (blockDim.x + 1) + tid] += auxAcc;
+//	if (tid == 0)
+//		s.d_auxStats[ix * (blockDim.x + 1) + blockDim.x] += sqrtgm;	
+//} //accAuxStatsKernel
 
-	const unsigned int FRAME_BLOCK = GMMStatsEstimator_GPU::FRAME_BLOCK;
-	const unsigned int DIM_BLOCK = GMMStatsEstimator_GPU::DIM_BLOCK;
+////different variant than in Matlab - worse results in some cases - mean diffetences instead of convert gammas (geometric mean or posterior probability)
+////<<< dim3(_model->dim/DIM_BLOCK, _model->nummix/GAUSS_BLOCK * _opt.frames_acc_blocks), dim3(GAUSS_BLOCK / DIM_BLOCK, DIM_BLOCK) >>>
+//__global__ void accAuxStatsKernel (GMMStatsEstimator_GPU::param p,
+//								   GMMStatsEstimator_GPU::likes l,
+//								   GMMStatsEstimator_GPU::stats s,
+//								   GMMStatsEstimator_GPU::OPTIONS opt,
+//								   unsigned int nummix,
+//								   unsigned int shiftFrames)
+//{	
+//	const unsigned int FRAME_BLOCK = GMMStatsEstimator_GPU::FRAME_BLOCK;
+//	const unsigned int DIM_BLOCK = GMMStatsEstimator_GPU::DIM_BLOCK;
+//	const unsigned int GAUSS_BLOCK = GMMStatsEstimator_GPU::GAUSS_BLOCK;
+//
+//	unsigned int ix = blockIdx.x;
+//	unsigned int iy = blockIdx.y % (nummix/GAUSS_BLOCK);
+//	unsigned int iz = blockIdx.y / (nummix/GAUSS_BLOCK);
+//	unsigned int nBlocks = (gridDim.y * GAUSS_BLOCK) / nummix;
+//	unsigned int tid = threadIdx.y * blockDim.x + threadIdx.x;
+//
+//	unsigned int NSamplesInBlock = ALIGN_UP( ALIGN_DIV(p.Nframes_processed, nBlocks), FRAME_BLOCK );
+//	shiftFrames += iz * NSamplesInBlock;
+//	if (shiftFrames > p.Nframes)
+//		return;
+//		
+//	unsigned int NSamples = ((iz+1) * NSamplesInBlock < p.Nframes_processed) ? NSamplesInBlock : p.Nframes_processed - iz * NSamplesInBlock;
+//	NSamples = (shiftFrames + NSamplesInBlock < p.Nframes) ? NSamples : p.Nframes - shiftFrames;
+//
+//	__shared__ float xx[DIM_BLOCK][4*FRAME_BLOCK]; //four bloks: recent, actual, and future blocks, agmented by difference-block
+//
+//	float gamma[FRAME_BLOCK];
+//	float sqrtgm = 0.0f;
+//	float auxAcc[DIM_BLOCK];
+//
+//	#pragma unroll
+//	for(int d=0; d < DIM_BLOCK; d++) auxAcc[d] = 0.0;
+//
+//	p.d_vecs += shiftFrames * p.dim + ix * FRAME_BLOCK * DIM_BLOCK; //move the pointer by shift and dimension
+//
+//	float foo2 = p.d_vecs[tid];
+//	if(threadIdx.x == 1) xx[threadIdx.y][2*FRAME_BLOCK - 1] = foo2; //int the recent block in reverse order
+//	xx[threadIdx.y][2*FRAME_BLOCK + threadIdx.x] = foo2; //init the future block in normal order
+//	__syncthreads();
+//		
+//	unsigned int offset = iz * nummix * (NSamplesInBlock / 4) + iy * GAUSS_BLOCK + tid;	
+//	for(unsigned int i=0; i< NSamples / FRAME_BLOCK; i++) {
+//
+//		__syncthreads();
+//
+//		//load gammas
+//		#pragma unroll
+//		for(unsigned int f = 0; f < FRAME_BLOCK/4; f ++) {			
+//			FLOAT4toREGARRAY(gamma, 4*f, l.d_gammas[offset + f * nummix]);
+//		}
+//		offset += FRAME_BLOCK/4 * nummix;
+//
+//		//move future frame block into actual place
+//		xx[threadIdx.y][threadIdx.x] = xx[threadIdx.y][FRAME_BLOCK+threadIdx.x];
+//		__syncthreads();
+//		xx[threadIdx.y][FRAME_BLOCK+threadIdx.x] = xx[threadIdx.y][2*FRAME_BLOCK+threadIdx.x];
+//		__syncthreads();
+//		p.d_vecs += FRAME_BLOCK * p.dim;
+//		if(i+1 < NSamples / FRAME_BLOCK) xx[threadIdx.y][2*FRAME_BLOCK+threadIdx.x] = p.d_vecs[tid];
+//		__syncthreads();
+//
+//		////LLLLLLLLLLLLLLLLLL
+//		//if(tid==0 && iz == 0 && iy == 0 && ix == 0 && i==NSamples / FRAME_BLOCK - 1) {
+//		//	for (int f=0;f<3*FRAME_BLOCK;f++)
+//		//		printf("\nFFFF: %d %e", f, xx[0][f]); //LLLLLLLLL
+//		//}
+//		//__syncthreads();
+//		////EEEEEEEEEEEEEEEEE
+//
+//		//compute differences
+//		float dx1 = fabs(xx[threadIdx.y][FRAME_BLOCK+threadIdx.x-1] - xx[threadIdx.y][FRAME_BLOCK+threadIdx.x]);
+//		float dx2 = fabs(xx[threadIdx.y][FRAME_BLOCK+threadIdx.x] - xx[threadIdx.y][FRAME_BLOCK+threadIdx.x+1]);
+//		if(i*FRAME_BLOCK + threadIdx.x + 1 == p.Nframes_unaligned) dx2 = dx1; //end fix
+//		xx[threadIdx.y][3*FRAME_BLOCK+threadIdx.x] = 0.5f * (dx1 + dx2);
+//		__syncthreads();
+//
+//		//accumulate
+//		if(ix==0) { 
+//			#pragma unroll
+//			for(int f=0; f < FRAME_BLOCK; f++) {				
+//				sqrtgm += sqrt(gamma[f]);
+//			}
+//		}
+//		#pragma unroll
+//		for(int f=0; f < FRAME_BLOCK; f++) {
+//			//if(tid==0 && iz == 0 && iy == 0 && ix == 0 && i==NSamples / FRAME_BLOCK - 1) printf("\nXXXX: %d %e %e", f, gamma[f], xx[0][3*FRAME_BLOCK+f]); //LLLLLLLLL
+//			#pragma unroll
+//			for(int d=0; d < DIM_BLOCK; d++) {
+//				auxAcc[d] += gamma[f] * xx[d][3*FRAME_BLOCK+f];
+//			}
+//		}
+//	} //for i - Nframes/FRAME_BLOCK
+//
+//	__syncthreads();
+//
+//	float foo[DIM_BLOCK];
+//	#pragma unroll
+//	for(int d=0; d < DIM_BLOCK; d++) {
+//		foo[d] = auxAcc[d] + s.d_auxStats[iz * s.statAuxSize + (p.dim + 1) * (iy * GAUSS_BLOCK + tid) + ix * DIM_BLOCK + d];
+//	}
+//	#pragma unroll
+//	for(int d=0; d < DIM_BLOCK; d++) {
+//		s.d_auxStats[iz * s.statAuxSize + (p.dim + 1) * (iy * GAUSS_BLOCK + tid) + ix * DIM_BLOCK + d] = foo[d];
+//	}
+//	
+//	if (ix == 0) {
+//		s.d_auxStats[iz * s.statAuxSize + (p.dim + 1) * (iy * GAUSS_BLOCK + tid) + p.dim] += sqrtgm;
+//		//printf("GGG %d %d %d %e\n", iy, iz, iz * s.statAuxSize + (p.dim + 1) * (iy * GAUSS_BLOCK + tid) + p.dim, sqrtgm); //LLLLLLLLL
+//	}
+//
+//} //accAuxStatsKernel 
 
-	extern __shared__ float xx[];
-	float *gamma = xx + p.dim*FRAME_BLOCK;
-	//float *buffLL = gamma + FRAME_BLOCK;
-
-	//"-1th" frame init
-	float auxAcc = 0.0f; //mean abs diff accumulator		
-	float g_old = 0.0f;
-
-	float x_old = p.d_vecs[shiftFrames * p.dim + 1 + tid*FRAME_BLOCK]; //init by second frame
-	float dx_old = fabs(p.d_vecs[shiftFrames * p.dim + tid*FRAME_BLOCK] - x_old);
-	
-	//unsigned int NSamples_max = p.Nframes_unaligned - shiftFrames;
-	unsigned int NSamples = (shiftFrames + p.Nframes_processed < p.Nframes) ? p.Nframes_processed : p.Nframes - shiftFrames;
-
-	float sqrtgm = 0;
-	for(unsigned int i=0; i< NSamples / FRAME_BLOCK; i++) {
-
-		__syncthreads();
-
-		//load gammas
-		for(unsigned int f = tid; f < FRAME_BLOCK; f += blockDim.x) {
-			gamma[f] = ((float*) l.d_gammas)[4*ix + i * FRAME_BLOCK * nummix + 4 * (f/DIM_BLOCK) * nummix + f%DIM_BLOCK];
-			gamma[f] *= 0.5f;
-		}
-
-		__syncthreads();
-		
-		//load param into shared memory - in frame by frame order (bank conflicts)
-		for(unsigned int m = tid; m < FRAME_BLOCK * p.dim; m += blockDim.x)
-			xx[(m % FRAME_BLOCK) * p.dim + (m / FRAME_BLOCK)] = p.d_vecs[shiftFrames * p.dim + i * FRAME_BLOCK * p.dim + m];
-		
-		__syncthreads();
-
-		//calculate differences
-		float dx = fabs(x_old - xx[tid]);
-		auxAcc += g_old * (dx_old + dx);
-		dx_old = dx;
-
-#pragma unroll
-		for(unsigned int f = 0; f < FRAME_BLOCK - 1; f++) {
-			dx = fabs(xx[f * p.dim + tid] - xx[(f + 1) * p.dim + tid]);
-			auxAcc += gamma[f] * (dx + dx_old);
-			sqrtgm += sqrt(gamma[f]);
-			dx_old = dx;
-		}
-		x_old = xx[(FRAME_BLOCK - 1) * p.dim + tid];
-		g_old = gamma[FRAME_BLOCK - 1];
-	} //for i - Nframes/FRAME_BLOCK
-
-	//last frame:
-	auxAcc += 2.0f * g_old * dx_old;
-
-	s.d_auxStats[ix * (blockDim.x + 1) + tid] += auxAcc;
-	if (tid == 0)
-		s.d_auxStats[ix * (blockDim.x + 1) + blockDim.x] += sqrtgm;	
-} //accAuxStatsKernel
+//different variant than in CPU/SSE - geometric mean istead of posterior probability ofgammas - it requires global norm of new gammas
 //<<< dim3(_model->dim/DIM_BLOCK, _model->nummix/GAUSS_BLOCK * _opt.frames_acc_blocks), dim3(GAUSS_BLOCK / DIM_BLOCK, DIM_BLOCK) >>>
 __global__ void accAuxStatsKernel (GMMStatsEstimator_GPU::param p,
 								   GMMStatsEstimator_GPU::likes l,
@@ -200,41 +332,65 @@ __global__ void accAuxStatsKernel (GMMStatsEstimator_GPU::param p,
 	unsigned int NSamples = ((iz+1) * NSamplesInBlock < p.Nframes_processed) ? NSamplesInBlock : p.Nframes_processed - iz * NSamplesInBlock;
 	NSamples = (shiftFrames + NSamplesInBlock < p.Nframes) ? NSamples : p.Nframes - shiftFrames;
 
-	__shared__ float xx[DIM_BLOCK][4*FRAME_BLOCK]; //four bloks: recent, actual, and future blocks, agmented by difference-block
+	__shared__ float xx[DIM_BLOCK][3*FRAME_BLOCK]; //three bloks: recent, actual, agmented by the difference-block
 
-	float gamma[FRAME_BLOCK];
+	float gamma[FRAME_BLOCK+1];
 	float sqrtgm = 0.0f;
+	float gm = 0.0f;
+	__shared__ float gn[FRAME_BLOCK];
 	float auxAcc[DIM_BLOCK];
 
 	#pragma unroll
 	for(int d=0; d < DIM_BLOCK; d++) auxAcc[d] = 0.0;
 
 	p.d_vecs += shiftFrames * p.dim + ix * FRAME_BLOCK * DIM_BLOCK; //move the pointer by shift and dimension
+	l.d_aux_ll += iz * NSamplesInBlock/4; //float4
 
-	float foo2 = p.d_vecs[tid];
-	if(threadIdx.x == 1) xx[threadIdx.y][2*FRAME_BLOCK - 1] = foo2; //int the recent block in reverse order
-	xx[threadIdx.y][2*FRAME_BLOCK + threadIdx.x] = foo2; //init the future block in normal order
-	__syncthreads();
-		
 	unsigned int offset = iz * nummix * (NSamplesInBlock / 4) + iy * GAUSS_BLOCK + tid;	
-	for(unsigned int i=0; i< NSamples / FRAME_BLOCK; i++) {
 
-		__syncthreads();
-
+	float foo2;
+	if(iz == 0) {
+		foo2 = p.d_vecs[tid];
+		if(threadIdx.x == 1) xx[threadIdx.y][2*FRAME_BLOCK - 1] = foo2; //int the recent block in reverse order
+	} else {
+		foo2 = (p.d_vecs - FRAME_BLOCK * p.dim)[tid];
+		xx[threadIdx.y][FRAME_BLOCK + threadIdx.x] = foo2; //init the future block in normal order
 		//load gammas
 		#pragma unroll
 		for(unsigned int f = 0; f < FRAME_BLOCK/4; f ++) {			
-			FLOAT4toREGARRAY(gamma, 4*f, l.d_gammas[offset + f * nummix]);
+			FLOAT4toREGARRAY(gamma, 1+4*f, l.d_gammas[offset + f * nummix - FRAME_BLOCK/4 * nummix]);
+		}
+	}
+	__syncthreads();
+		
+	for(unsigned int i=0; i< NSamples / FRAME_BLOCK; i++) {
+	//for(unsigned int i=0; i< 1; i++) { //LLLLLLLL
+
+		__syncthreads();
+
+		//copy last gamma to old
+		gamma[0] = gamma[FRAME_BLOCK];
+		//load gammas
+		#pragma unroll
+		for(unsigned int f = 0; f < FRAME_BLOCK/4; f ++) {			
+			FLOAT4toREGARRAY(gamma, 1+4*f, l.d_gammas[offset + f * nummix]);
 		}
 		offset += FRAME_BLOCK/4 * nummix;
+		//set gamma of -1 frame to zero:
+		if(iz == 0 && i==0) gamma[0] = 0.0f;
 
 		//move future frame block into actual place
 		xx[threadIdx.y][threadIdx.x] = xx[threadIdx.y][FRAME_BLOCK+threadIdx.x];
 		__syncthreads();
-		xx[threadIdx.y][FRAME_BLOCK+threadIdx.x] = xx[threadIdx.y][2*FRAME_BLOCK+threadIdx.x];
-		__syncthreads();
+		//xx[threadIdx.y][FRAME_BLOCK+threadIdx.x] = xx[threadIdx.y][2*FRAME_BLOCK+threadIdx.x];
+		//__syncthreads();
+		xx[threadIdx.y][FRAME_BLOCK+threadIdx.x] = p.d_vecs[tid];
 		p.d_vecs += FRAME_BLOCK * p.dim;
-		if(i+1 < NSamples / FRAME_BLOCK) xx[threadIdx.y][2*FRAME_BLOCK+threadIdx.x] = p.d_vecs[tid];
+
+		if(tid < FRAME_BLOCK) {
+			gn[tid] = ((float*)&(l.d_aux_ll[i*2]))[tid];
+			gn[tid] = (gn[tid] == 0)? 0.0f : 1/gn[tid];
+		}
 		__syncthreads();
 
 		////LLLLLLLLLLLLLLLLLL
@@ -247,24 +403,31 @@ __global__ void accAuxStatsKernel (GMMStatsEstimator_GPU::param p,
 
 		//compute differences
 		float dx1 = fabs(xx[threadIdx.y][FRAME_BLOCK+threadIdx.x-1] - xx[threadIdx.y][FRAME_BLOCK+threadIdx.x]);
-		float dx2 = fabs(xx[threadIdx.y][FRAME_BLOCK+threadIdx.x] - xx[threadIdx.y][FRAME_BLOCK+threadIdx.x+1]);
-		if(i*FRAME_BLOCK + threadIdx.x + 1 == p.Nframes_unaligned) dx2 = dx1; //end fix
-		xx[threadIdx.y][3*FRAME_BLOCK+threadIdx.x] = 0.5f * (dx1 + dx2);
+		//float dx2 = fabs(xx[threadIdx.y][FRAME_BLOCK+threadIdx.x] - xx[threadIdx.y][FRAME_BLOCK+threadIdx.x+1]);
+		//if(i*FRAME_BLOCK + threadIdx.x + 1 == p.Nframes_unaligned) dx2 = dx1; //end fix
+		xx[threadIdx.y][2*FRAME_BLOCK+threadIdx.x] = dx1;//LLLLLLLLLLLLL
 		__syncthreads();
 
 		//accumulate
-		if(ix==0) { 
+//		if(ix==0) { 
 			#pragma unroll
 			for(int f=0; f < FRAME_BLOCK; f++) {				
-				sqrtgm += sqrt(gamma[f]);
+				float g = (gamma[f] * gamma[f+1]) * gn[f];
+				sqrtgm += (gamma[f+1] > opt.minGamma) * sqrt(gamma[f+1]);
+				gm += g;
+				gamma[f] = g;
 			}
-		}
+//		}
+		//if(iz == 1 && iy == 0 && ix == 0 && i==0) printf("\nXXXX: %d %d %e", threadIdx.y, threadIdx.x, xx[threadIdx.y][threadIdx.x]); //LLLLLLLLL
+		//if(iz == 1 && iy == 0 && ix == 0 && i==0) printf("\nYYYY: %d %d %e", threadIdx.y, threadIdx.x, xx[threadIdx.y][FRAME_BLOCK+threadIdx.x]); //LLLLLLLLL
+		//if(iz == 1 && iy == 0 && ix == 0 && i==0) printf("\nZZZZ: %d %d %e", threadIdx.y, threadIdx.x, xx[threadIdx.y][2*FRAME_BLOCK+threadIdx.x]); //LLLLLLLLL
+
 		#pragma unroll
 		for(int f=0; f < FRAME_BLOCK; f++) {
-			//if(tid==0 && iz == 0 && iy == 0 && ix == 0 && i==NSamples / FRAME_BLOCK - 1) printf("\nXXXX: %d %e %e", f, gamma[f], xx[0][3*FRAME_BLOCK+f]); //LLLLLLLLL
 			#pragma unroll
 			for(int d=0; d < DIM_BLOCK; d++) {
-				auxAcc[d] += gamma[f] * xx[d][3*FRAME_BLOCK+f];
+				auxAcc[d] += gamma[f] * xx[d][2*FRAME_BLOCK+f];
+				//auxAcc[d] += (i == 104) * gamma[f] * xx[d][2*FRAME_BLOCK+f];
 			}
 		}
 	} //for i - Nframes/FRAME_BLOCK
@@ -274,19 +437,21 @@ __global__ void accAuxStatsKernel (GMMStatsEstimator_GPU::param p,
 	float foo[DIM_BLOCK];
 	#pragma unroll
 	for(int d=0; d < DIM_BLOCK; d++) {
-		foo[d] = auxAcc[d] + s.d_auxStats[iz * s.statAuxSize + (p.dim + 1) * (iy * GAUSS_BLOCK + tid) + ix * DIM_BLOCK + d];
+		foo[d] = auxAcc[d] + s.d_auxStats[iz * s.statAuxSize + (p.dim + 2) * (iy * GAUSS_BLOCK + tid) + ix * DIM_BLOCK + d];
 	}
 	#pragma unroll
 	for(int d=0; d < DIM_BLOCK; d++) {
-		s.d_auxStats[iz * s.statAuxSize + (p.dim + 1) * (iy * GAUSS_BLOCK + tid) + ix * DIM_BLOCK + d] = foo[d];
+		s.d_auxStats[iz * s.statAuxSize + (p.dim + 2) * (iy * GAUSS_BLOCK + tid) + ix * DIM_BLOCK + d] = foo[d];
 	}
 	
 	if (ix == 0) {
-		s.d_auxStats[iz * s.statAuxSize + (p.dim + 1) * (iy * GAUSS_BLOCK + tid) + p.dim] += sqrtgm;
-		//printf("GGG %d %d %d %e\n", iy, iz, iz * s.statAuxSize + (p.dim + 1) * (iy * GAUSS_BLOCK + tid) + p.dim, sqrtgm); //LLLLLLLLL
+		s.d_auxStats[iz * s.statAuxSize + (p.dim + 2) * (iy * GAUSS_BLOCK + tid) + p.dim] += sqrtgm;
+		s.d_auxStats[iz * s.statAuxSize + (p.dim + 2) * (iy * GAUSS_BLOCK + tid) + p.dim + 1] += gm;
+		//printf("GGG %d %d %d %e\n", iy, iz, iz * s.statAuxSize + (p.dim + 2) * (iy * GAUSS_BLOCK + tid) + p.dim, sqrtgm); //LLLLLLLLL
 	}
 
-} //accAuxStatsKernel 
+} //accAuxStatsKernel_debug
+
 
 
 // full covariance matrix will be accumulated - only upper triangle stored
@@ -584,6 +749,86 @@ __global__ void gammasKernel (GMMStatsEstimator_GPU::model m,
 	l.d_gammas[addr + gridDim.y * blockDim.x + tid] = ((float4*) acc)[1]; //make_float4(acc04, acc05, acc06, acc07);
 }
 
+// gammasKernelLargeDim <<< dim3(alignedNframes/FRAME_BLOCK, alignedNmix/GAUSS_BLOCK), GAUSS_BLOCK, 1024*sizeof(float) >>> 
+__global__ void gammasKernelLargeDim (GMMStatsEstimator_GPU::model m, 
+							  GMMStatsEstimator_GPU::param p, 
+							  GMMStatsEstimator_GPU::likes l, 
+							  unsigned int shiftFrames)
+{	
+	unsigned int ix = blockIdx.x;
+	unsigned int iy = blockIdx.y;
+	unsigned int tid = threadIdx.x;
+
+	const unsigned int FRAME_BLOCK = GMMStatsEstimator_GPU::FRAME_BLOCK;
+	const unsigned int DATA_BLOCK = GMMStatsEstimator_GPU::DATA_BLOCK;
+	const unsigned int DIM_BLOCK = GMMStatsEstimator_GPU::DIM_BLOCK;
+	const unsigned int DIMS_PER_BLOCK = 1024/DATA_BLOCK;
+	
+	int dimBlocks = ALIGN_DIV(p.dim/DIM_BLOCK, DIMS_PER_BLOCK);
+
+	//__shared__ float xx[FRAME_BLOCK * MAX_DIM];
+	extern __shared__ float xx[];
+
+	// array in registry - accumulated exponents (along dimension) of gaussians for 8 frames
+	float acc[FRAME_BLOCK];
+
+	#pragma unroll
+	for(unsigned int i = 0; i < FRAME_BLOCK; i++) {
+		acc[i] = 0.0f;
+	}
+
+	// set addres index to begin of block
+	unsigned int addr = iy * blockDim.x * p.dim/4; // note: float4 => dim/4
+	
+	//main BLOCKSDIM loop - for large dimesions
+	for(int dm = 0; dm < dimBlocks; dm++) {
+
+		//load param into shared memory
+		int maxDim = min(DIMS_PER_BLOCK, p.dim/DIM_BLOCK - dm * DIMS_PER_BLOCK);
+		for(unsigned int d = 0; d < maxDim; d++) { 
+			__syncthreads();
+			xx[d * DATA_BLOCK + tid] = p.d_vecs[shiftFrames * p.dim + ix * FRAME_BLOCK * p.dim + (d+DIMS_PER_BLOCK*dm) * DATA_BLOCK + tid];
+		}
+			
+		// cycle through all dimensions
+		for(unsigned int k = 0; k < maxDim; k++) {
+
+			// load model
+			__syncthreads();
+
+			float mean[4], ivar[4];
+			((float4*) mean)[0] = m.d_means[addr + tid];
+			((float4*) ivar)[0] = m.d_ivars[addr + tid];
+
+
+			// first/second/third/fourth dimension in the block - 8 frames are processed
+	#pragma unroll
+			for(unsigned int j = 0; j < 4; j++) {
+	#pragma unroll
+				for(unsigned int i = 0; i < FRAME_BLOCK; i++) {			
+					float tmp = xx[DATA_BLOCK * k + j*FRAME_BLOCK + i] - mean[j];
+					acc[i] += tmp * tmp * ivar[j];
+				}
+			}			
+			addr += blockDim.x;
+		}//for k
+	}//for dm
+
+	__syncthreads();
+	float gc = m.d_Gconsts[iy * blockDim.x + tid];
+
+	// finalise and add LogProb
+#pragma unroll		
+	for(unsigned int i = 0; i < FRAME_BLOCK; i++) {
+		acc[i] = -0.5f * acc[i] + gc;
+	}
+	__syncthreads();
+
+	// store results
+	addr = 2 * ix * gridDim.y * blockDim.x + iy * blockDim.x;
+	l.d_gammas[addr + tid] = ((float4*) acc)[0]; // make_float4(acc00, acc01, acc02, acc03);
+	l.d_gammas[addr + gridDim.y * blockDim.x + tid] = ((float4*) acc)[1]; //make_float4(acc04, acc05, acc06, acc07);
+}
 
 
 // gammasKernel <<< dim3(alignedNframes/FRAME_BLOCK, alignedNmix/GAUSS_BLOCK), GAUSS_BLOCK, FRAME_BLOCK*_model->dim*sizeof(float) >>> 
@@ -908,5 +1153,74 @@ __global__ void addArraysKernel (float* d_arr, unsigned int Nblocks, unsigned in
 	d_arr[offset + tid] = sum;
 }
 
+
+//gammas are non-log (after exp) - normal multiply and sum
+// normAuxGammasKernel <<< alignedNframes/4, GAUSS_BLOCK >>>
+__global__ void normAuxGammasKernel (GMMStatsEstimator_GPU::likes l, 
+							   unsigned int nummix, unsigned int nummixAligned, float minGamma) 
+{	
+	int ix = blockIdx.x;
+	int tid = threadIdx.x;
+	const int numSteps = nummixAligned/blockDim.x;
+	l.d_gammas += ix * nummixAligned; //shift gammas pointer	
+	float4 *old_gammas =  l.d_gammas - nummixAligned;
+
+	const unsigned int GAUSS_BLOCK = GMMStatsEstimator_GPU::DATA_BLOCK;
+
+	float sumLL[4];
+	float4 gL = make_float4(0,0,0,0);
+	float gbuff[5];
+#pragma unroll
+		for(int f=0; f<4; f++) sumLL[f] = 0;
+
+	for(unsigned int i = 0; i < numSteps; i++) {
+		  
+		if(ix > 0) gL = old_gammas[i * blockDim.x + tid];
+		FLOAT4toREGARRAY(gbuff, 1, l.d_gammas[i * blockDim.x + tid]);
+		gbuff[0] = gL.w;
+#pragma unroll
+		for(int f=0; f<4; f++) {
+			float g = gbuff[f]*gbuff[f+1];
+			sumLL[f] += (g > minGamma) * g;
+		}  
+	}
+
+	// parallel sum
+	__shared__ float buff[4 * GAUSS_BLOCK];
+	
+	((float4*)buff)[tid] = make_float4_REGARRAY(sumLL, 0); //bank conflicts!
+	__syncthreads();
+
+	buff[tid] += buff[GAUSS_BLOCK+tid];
+
+	__syncthreads();
+	buff[32+tid] = buff[2*GAUSS_BLOCK+tid] + buff[3*GAUSS_BLOCK+tid];
+	__syncthreads();
+	if(GAUSS_BLOCK >= 256) {
+		buff[tid] += buff[256+tid];
+		__syncthreads();
+	}
+	if(GAUSS_BLOCK >= 128) {
+		buff[tid] += buff[128+tid];
+		__syncthreads();
+	}
+	if(GAUSS_BLOCK >= 64) {
+		buff[tid] += buff[64+tid];
+		__syncthreads();
+	}
+	if(tid<32) {
+		volatile float *_buff = buff;
+		_buff[tid] += _buff[32+tid];
+		_buff[tid] += _buff[16+tid];
+		_buff[tid] += _buff[8+tid];
+		_buff[tid] += _buff[4+tid];
+	}
+
+	// store logLike
+	if(tid < 4) {
+		float tmp1 = buff[tid];
+		((float*)&(l.d_aux_ll[blockIdx.x]))[tid] = tmp1;
+	}
+}
 
 #endif

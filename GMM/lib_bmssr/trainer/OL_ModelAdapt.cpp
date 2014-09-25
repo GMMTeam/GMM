@@ -506,20 +506,29 @@ void CModelAdapt::GetNIndFrames(GMMStats<STATS_TYPE> &stats, double *NindFrames)
 	}
 	
 
+	//if(nummix > 1) printf("MII: "); //LLLLLLLLLLLLL
+	 
 	for(unsigned int m = 0; m < nummix; m++) {
-		if (stats[m].mixProb == 0) {
+		if (stats[m].mixProb == 0 || stats[m].aux3 == 0) {
 			NindFrames[m] = 0;
 		}
 		else {
 			for(unsigned int d = 0; d < dim; d++) {
-				NindFrames[m] += stats[m].aux[d] / stats[m].mixProb / glob_std[d];
+				NindFrames[m] += stats[m].aux[d] / stats[m].aux3 / glob_std[d];
 			}
 			NindFrames[m] /= dim;
+
+			//if(nummix > 1) printf("%f ", NindFrames[m]);//LLLLLLLLLLLLLLL
+
 			// Dg = ( MII/1.12 ).^3; -> viz trainGMM.m -> 'robust' verze			
 			NindFrames[m] = pow(NindFrames[m] / 1.12, 3);
 			NindFrames[m] = 1 + (stats[m].aux2 * glob_mixProb / sumNg - 1) * NindFrames[m];
 		}
 	}	
+
+	//LLLLLLLLLLLLLLL
+	//if(nummix == 2) printf("sum: %f %f   sumSqrt: %f %f   Ng: %f %f\n", stats[0].aux3, stats[1].aux3, stats[0].aux2, stats[1].aux2, NindFrames[0], NindFrames[1]);
+	//if(nummix >  2) printf("sum: %f %f %f  sumSqrt: %f %f %f  Ng: %f %f %f\n", stats[0].aux3, stats[1].aux3, stats[2].aux3, stats[0].aux2, stats[1].aux2, stats[2].aux2, NindFrames[0], NindFrames[1], NindFrames[2]);
 
 	delete [] glob_std;
 	delete [] glob_mean;
@@ -547,7 +556,7 @@ double *CModelAdapt::MakeRobustStats(GMMStats<STATS_TYPE> &stats, bool return_Ni
 	if((NindFrames = new(nothrow) double[nummix]) == NULL)
 		EXCEPTION_THROW(ModelAdaptException, "MakeRobustStats(): Not enough memory! \n\t ", true);
 
-	GetNIndFrames(stats, NindFrames);	
+	GetNIndFrames(stats, NindFrames);
 
 	for(int j = 0; j < nummix; j++) {
 		float dc = getDiagCovMultiplier(NindFrames[j]);
@@ -671,6 +680,10 @@ void CModelAdapt::TrainFromScratch(unsigned int nummix, bool fullcov,
 
 	unsigned int dim;
 	unsigned int maxIter;
+
+	if(_param.GetNumberOfVectors() <= 3) {
+		throw std::exception("TrainFromScratch(): Not enough data to model training.");
+	}
 	
 	bool initGMMinserted = true;
 	if (initGMM == NULL) {
@@ -730,7 +743,7 @@ void CModelAdapt::TrainFromScratch(unsigned int nummix, bool fullcov,
 	ll[0] = ll[1] = ll[2] = -numeric_limits<float>::max();
 	
 	// estimation of model params	
-	unsigned int nonZeroG = initGMM->GetNumberOfMixtures();	
+	unsigned int nonZeroG = initGMM->GetNumberOfMixtures();
 	for (unsigned int it = 0; it < maxIter; it++) {
 		if(_verbosity)
 			std::cout << "\n [Split num = " << it + 1 << "]" << std::endl;
@@ -786,8 +799,10 @@ void CModelAdapt::TrainFromScratch(unsigned int nummix, bool fullcov,
 			model->Save(ss.str().c_str(), save_txt);
 		}
 				
-		splitMultipleGaussians(*model);
-		nonZeroG += 1;
+		if(it < maxIter - 1) {
+			splitMultipleGaussians(*model);
+			nonZeroG += 1;
+		}
 	}		
 
 	unsigned int NzeroG = model->RearrangeMixtures();	

@@ -205,9 +205,9 @@ protected:
 								  unsigned int* mixIdxs = NULL, unsigned int Nmi = 0);
 
 	// accumulate one vector
-	virtual void accumulateAuxStats (TV* vec1, TV* vec2, TV* vec3, unsigned int dim, 
-									 GMMStats<TS>& gmms, std::vector<TL>& gammas,
-								     unsigned int* mixIdxs = NULL, unsigned int Nmi = 0);
+	virtual void accumulateAuxStats (TV* vec1, TV* vec2, unsigned int dim, 
+									 GMMStats<TS>& gmms, std::vector<TL>& gammas, std::vector<TL>& gammas_old,
+								     unsigned int* mixIdxs = NULL, unsigned int* mixIdxs_old = NULL, unsigned int Nmi = 0, unsigned int Nmi_old = 0);
 
 	// handles one thread
 	void threadFuncAcc (TV** vectors, unsigned int NSamples, unsigned int dim,

@@ -386,7 +386,7 @@ int Param::LoadRaw(const char *filename, unsigned int dwnsmp)
 			unsigned int fsize = file.tellg();
 			fsize -= 2 * sizeof(__int32);
 			nsamples = fsize / Dim / sizeof(float);
-			file.seekg(sizeof(__int32), file.beg);
+			file.seekg(2*sizeof(__int32), file.beg);
 		}
 
 		// set number of samples after downsampling,
