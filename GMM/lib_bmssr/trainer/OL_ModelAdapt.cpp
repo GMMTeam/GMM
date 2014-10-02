@@ -682,7 +682,8 @@ void CModelAdapt::TrainFromScratch(unsigned int nummix, bool fullcov,
 	unsigned int maxIter;
 
 	if(_param.GetNumberOfVectors() <= 3) {
-		throw std::exception("TrainFromScratch(): Not enough data to model training.");
+		//throw std::exception("TrainFromScratch(): Not enough data to model training.");
+		EXCEPTION_THROW(ModelAdaptException, "TrainFromScratch(): Not enough data to model training.\n\t ", true);
 	}
 	
 	bool initGMMinserted = true;

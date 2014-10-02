@@ -408,7 +408,7 @@ void GMMStatsEstimator_CUDA<TS>::accumulateStatsMT (float** vectors, unsigned in
 	}
 
 	if(!this->_flagsSet)
-		setAccFlags(gmms);
+		this->setAccFlags(gmms);
 
 #ifndef _EXCLUDE_SAFETY_CONDS_
 	checkProperAllocation(gmms);
